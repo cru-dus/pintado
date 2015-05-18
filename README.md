@@ -1,2 +1,2 @@
 # pintado
-A terminal-based paint like application for the ICS-OS.
+A simple drawing application for the UPLB ICS-OS.
