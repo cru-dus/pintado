@@ -1,5 +1,5 @@
 #include "../../sdk/dexsdk.h"
-#include "../../sdk/time.h"
+
 /*----MOVEMENTS-----*/
 #define RIGHT 'd'
 #define LEFT 'a'
@@ -10,6 +10,7 @@
 #define BL 'z'
 #define BR 'c'
 #define EXIT 'p'
+#define FILL 'f'
 /*----COLORS-----*/
 #define _BLACK '1'
 #define _BLUE '2'
@@ -23,10 +24,10 @@
 /*----DIMENSION-----*/
 #define MIN_X 165
 #define MIN_Y 45
-#define MAX_X MIN_X+150
-#define MAX_Y MIN_Y+150
+#define MAX_X MIN_X+150-1
+#define MAX_Y MIN_Y+150-1
 /*----SIZE-----*/
-#define TOOL_FONT_SIZE 50
+#define TOOL_FONT_SIZE 0
 
 
 
@@ -42,11 +43,20 @@ void clear_canvas();
 void set_up_workarea();
 void set_up_home();
 void draw_line(int, int, int, int, int);
-void draw_rectangle(int, int, int, int, int);
+void draw_vertical_line(int, int, int, int);
+void draw_horizontal_line(int, int, int, int);
 void reset_points();
 void display_readme();
 
-POINT start, end;
+/*matrix operations for virtual canvas*/
+void initialize_pixel_matrix();
+void color_pixel(POINT, int);
+void fill_pixel_matrix(int, int, int);
+void reset_pixel_matrix();
+
+POINT end;
+int **image = NULL;
+
 
 int main(){
 	int i, color = BLACK, flag=1;
@@ -64,15 +74,13 @@ int main(){
 			case '1':
 				flag=0;
 				break;
-			case '2':
-				clear_screen();
-				set_graphics(VGA_TEXT80X25X16);
-				display_readme();
-				break;
 		}
 	}
 	set_up_workarea();
+	initialize_pixel_matrix();
 	while(1){
+		flag=0;
+	get_key:
 		keypress = (char)getch();
 		switch(keypress){
 			case RIGHT:
@@ -111,29 +119,41 @@ int main(){
 					end.y++;
 				}
 				break;
+			case FILL:
+				flag=1;
+				goto get_key;
+
 			case _BLACK:
 				color = BLACK;
+				flag++;
 				break;
 			case _BLUE:
 				color = BLUE;
+				flag++;
 				break;
 			case _GREEN:
 				color = GREEN;
+				flag++;
 				break;
 			case _RED:
 				color = RED;
+				flag++;
 				break;
 			case _BROWN:
 				color = BROWN;
+				flag++;
 				break;
 			case _YELLOW:
 				color = YELLOW;
+				flag++;
 				break;
 			case _ERASE:
 				color = WHITE;
+				flag++;
 				break;
 			case _CLEAR:
 				clear_canvas();
+				reset_pixel_matrix();
 				reset_points();
 				color = BLACK;
 				break;
@@ -141,12 +161,79 @@ int main(){
 				exit_pintado();
 				return;
 		}
+		if(flag==2){
+			fill_pixel_matrix(end.x - MIN_X, end.y - MIN_Y, color);
+		}
+		color_pixel(end, color);
 		write_pixel(end.x, end.y, color);
 	}
 }
 
+void initialize_pixel_matrix(){
+	int i,j;
+
+	image = (int**)malloc(sizeof(int)*150);
+		
+	for(i=0;i<150;i++){
+		image[i]=(int*)malloc(sizeof(int)*150);
+		for(j=0;j<150;j++)
+			image[i][j] = WHITE;
+	}
+}
+
+void reset_pixel_matrix(){
+	int i,j;
+		
+	for(i=0;i<150;i++){
+		for(j=0;j<150;j++)
+			image[i][j] = WHITE;
+	}
+}
+
+//color the pixel in the matrix, not the canvas
+void color_pixel(POINT p, int c){
+	//adjust points, with reference to the canvas
+	int x, y;
+	x = p.x - MIN_X;
+	y = p.y - MIN_Y;
+	if(x>=0 && x<150 && y>=0 && y<150)
+		image[x][y] = c;
+}
+
+//fill feature; colors the current pixel and every pixel adjacent to it 
+//(iff have the same color) with the specified color
+//parameters must already be adjusted
+void fill_pixel_matrix(int x, int y, int c){
+	int colour = image[x][y];
+	image[x][y] = c;
+	write_pixel(x+MIN_X,y+MIN_Y,c);
+	//check all points in the left of the current pixel
+	if(y-1>=0){
+		/* RECURSE TOP LEFT */
+		//if(x-1 >= 0 && image[x-1][y-1] == colour)fill_pixel_matrix(x-1, y-1, c);
+		/* RECURSE LEFT */
+		if(image[x][y-1] == colour)fill_pixel_matrix(x, y-1, c);
+		/* RECURSE TOPRIGHT */
+		//if(x+1 < 150 && image[x+1][y-1] == colour)fill_pixel_matrix(x+1, y-1, c);
+	}
+	//check all points in the right of the current pixel
+	if(y+1 < 150){
+		/* CHECK TOP RIGHT */
+		//if(x-1 >= 0 && image[x-1][y+1] == colour)fill_pixel_matrix(x-1, y+1, c);
+		/* CHECK RIGHT */
+		if(image[x][y+1] == colour)fill_pixel_matrix(x, y+1, c);
+		/* CHECK BOTTOM RIGHT */
+		//if(x+1 < 150 && image[x+1][y+1] == colour)fill_pixel_matrix(x+1, y+1, c);
+	}
+	/* CHECK TOP */
+	if(x-1 >= 0 && image[x-1][y] == colour)fill_pixel_matrix(x-1, y, c);
+	/* CHECK BOTTOM */
+	if(x+1 < 150 && image[x+1][y] == colour)fill_pixel_matrix(x+1, y, c);
+
+}
+
 void reset_points(){
-	start.x = (MAX_X+MIN_X)/2, start.y = (MAX_Y+MIN_Y)/2, end.x = (MAX_X+MIN_X)/2, end.y = (MAX_Y+MIN_Y)/2;
+	end.x = (MAX_X+MIN_X)/2, end.y = (MAX_Y+MIN_Y)/2;
 }
 
 void exit_pintado(){
@@ -154,7 +241,8 @@ void exit_pintado(){
 	clrscr();
 }
 
-void erase(int x, int y, int w, int h){ //basically covers an area with a black rectangle 
+//basically covers an area with a black rectangle 
+void erase(int x, int y, int w, int h){ 
    int i,j;
    for (i=y;i<=(y+h);i++)
       for (j=x;j<=(x+w);j++)
@@ -167,24 +255,10 @@ void clear_screen(){
 
 void clear_canvas(){
 	int i,j;
-	int x=165,y=45,w=150,h=150;
-   for (i=y;i<=(y+h);i++)
-      for (j=x;j<=(x+w);j++)
+	int x=MIN_X,y=MIN_Y,w=150,h=150;
+   for (i=y;i<(y+h);i++)
+      for (j=x;j<(x+w);j++)
          write_pixel(j,i,WHITE);
-}
-
-void display_readme(){
-	FILE *fp = fopen("./README.txt", "r");
-	char *line;
-	if(fp == NULL){
-		printf("ERROR in opening the file README\n");
-		return;
-	}
-	
-	while(1){
-		if(fgets(line, 250, fp) == NULL)break;
-		printf("%s",line);
-	}
 }
 
 void set_up_home(){
@@ -197,9 +271,22 @@ void set_up_home(){
 	
 	write_text("PINTADO", 125, 90, WHITE, 1);
 	write_text("1 - Start", 120, 150, WHITE, 0);
-	write_text("2 - Read Me", 115, 160, WHITE, 0);
 	write_text("0 - Close", 120, 170, WHITE, 0);
 
+}
+
+void draw_horizontal_line(int row, int y1, int y2, int c){
+	int i;
+	for(i=y1; i<y2; i++){
+		write_pixel(i,row, c);
+	}
+}
+
+void draw_vertical_line(int col, int x1, int x2, int c){
+	int i;
+	for(i=x1; i<x2; i++){
+		write_pixel(col,i, c);
+	}
 }
 
 void draw_line(int x1, int y1, int x2, int y2, int c){
@@ -208,7 +295,7 @@ void draw_line(int x1, int y1, int x2, int y2, int c){
 	int abs_dy = dy*dy/dy;
 	int m = 2*abs_dy;
 	int x = x1, y = y1, e=0, t=dx, t_inc=2*dx;
-	
+	abs_dy = (abs_dy<0)?abs_dy*-1:abs_dy;
 	while(x<=x2){
 		write_pixel(x,y,c);
 		e=e+m;
@@ -220,34 +307,49 @@ void draw_line(int x1, int y1, int x2, int y2, int c){
 	}
 }
 
-void draw_rectangle(int x1, int y1, int x2, int y2, int c){
-
-}
-
 void set_up_workarea(){
 	clear_screen();
-  write_text("1-Black",5,5,DARKGRAY,TOOL_FONT_SIZE);
-  write_text("2-Blue",5,15,BLUE,TOOL_FONT_SIZE);
-  write_text("3-Green",5,25,GREEN,TOOL_FONT_SIZE);
-  write_text("4-Red",5,35,RED,TOOL_FONT_SIZE);
-  write_text("5-Brown",5,45,BROWN,TOOL_FONT_SIZE);
-  write_text("6-Yellow",5,55,YELLOW,TOOL_FONT_SIZE);
-  write_text("7-White",5,65,WHITE,TOOL_FONT_SIZE);
-  write_text("w-Up",5,85,WHITE,TOOL_FONT_SIZE);
-  write_text("s-Down",5,95,WHITE,TOOL_FONT_SIZE);
-  write_text("a-Left",5,105,WHITE,TOOL_FONT_SIZE);
-  write_text("d-Right",5,115,WHITE,TOOL_FONT_SIZE);
-  write_text("q-Upper Left",5,125,WHITE,TOOL_FONT_SIZE);
-  write_text("e-Upper Right",5,135,WHITE,TOOL_FONT_SIZE);
-  write_text("z-Lower Left",5,145,WHITE,TOOL_FONT_SIZE);
-  write_text("c-Lower Right",5,155,WHITE,TOOL_FONT_SIZE); 
-  write_text("0-Clear",5,175,WHITE,TOOL_FONT_SIZE);
-  write_text("f-Open File",5,185,WHITE,TOOL_FONT_SIZE);  
-  write_text("p-EXIT",5,195,RED,TOOL_FONT_SIZE);
+	draw_horizontal_line(2, MIN_X, MAX_X, LIGHTMAGENTA);
+	draw_horizontal_line(MIN_Y-1, MIN_X, MAX_X, LIGHTMAGENTA);
+	draw_vertical_line(MIN_X, 2, MIN_Y-1, LIGHTMAGENTA);
+	draw_vertical_line(MAX_X, 2, MIN_Y-1, LIGHTMAGENTA);
+
+	draw_horizontal_line(5, 1, 164, LIGHTRED);
+	draw_horizontal_line(70, 1, 164, LIGHTRED);
+	draw_horizontal_line(150, 1, 164, LIGHTRED);
+	
+
+	write_text("P", MIN_X+45, 15, DARKGRAY, 1);
+	write_text("I", MIN_X+55, 15, BLUE, 1);
+	write_text("N", MIN_X+65, 15, GREEN, 1);
+	write_text("T", MIN_X+75, 15, RED, 1);
+	write_text("A", MIN_X+85, 15, BROWN, 1);
+	write_text("D", MIN_X+95, 15, YELLOW, 1);
+	write_text("O", MIN_X+105, 15, WHITE, 1);
+
+	write_text("Colors", 45,15, CYAN, 0);				
+	write_text("1-Black",5,25,DARKGRAY,TOOL_FONT_SIZE);
+	write_text("2-Blue",85,25,BLUE,TOOL_FONT_SIZE);
+	write_text("3-Green",5,35,GREEN,TOOL_FONT_SIZE);
+	write_text("4-Red",85,35,RED,TOOL_FONT_SIZE);
+	write_text("5-Brown",5,45,BROWN,TOOL_FONT_SIZE);
+	write_text("6-Yellow",85,45,YELLOW,TOOL_FONT_SIZE);
+	write_text("7-White",40,55,WHITE,TOOL_FONT_SIZE);
+
+	write_text("Movements", 37,75, CYAN, 0);				
+	write_text("w-Up",5,85,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("d-Right",85,85,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("s-Down",5,95,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("a-Left",85,95,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("q-Upper Left",22,105,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("e-Upper Right",17,115,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("z-Lower Left",22,125,LIGHTGRAY,TOOL_FONT_SIZE);
+	write_text("c-Lower Right",17,135,LIGHTGRAY,TOOL_FONT_SIZE); 
+
+	write_text("Others", 45,155, CYAN, 0);	
+	write_text("f<color_key>-Fill",5,165,LIGHTGRAY,TOOL_FONT_SIZE);			
+	write_text("0-Clear",50,175,RED,TOOL_FONT_SIZE);
+	write_text("p-EXIT",50,185,RED,TOOL_FONT_SIZE);
 
 	clear_canvas();  
 }
-
-
-
-
