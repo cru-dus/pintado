@@ -5,7 +5,7 @@ A colorful drawing application for the UPLB ICS-OS.
 	Draw simple objects such as points and lines using key events.
 
 # INSTALLATION
-	To install Pintado in [ICS-OS] (https://github.com/srg-ics-uplb/ics-os):
+	To install Pintado in [ICS-OS](https://github.com/srg-ics-uplb/ics-os):
 		Extracting and placement of source code.
 			1. Extract files from pintado.zip.
 			2. Copy pintado folder to ics-os/contrib.
@@ -112,8 +112,8 @@ A colorful drawing application for the UPLB ICS-OS.
 
 # AUTHORS
 	Written by 
-		Clinton E. Poserio (ceposerio@up.edu.ph) and 
-		Kenneth B. Kim (kbkim@up.edu.ph).
+		[Clinton E. Poserio](ceposerio@up.edu.ph) and 
+		[Kenneth B. Kim](kbkim@up.edu.ph).
 	
 # REPORTING BUGS
 	Report Pintado bugs to our emails.
