@@ -122,5 +122,10 @@ A colorful drawing application for the UPLB ICS-OS.
 	This is a free software: you are free to change and redistribute it.
 	There is NO WARRANTY, to the extent permitted by law.
 
+# SCREENSHOTS
+
+![Screenshot](https://raw.githubusercontent.com/cru-dus/pintado/master/Screenshots/java.png)
+![Screenshot](https://raw.githubusercontent.com/cru-dus/pintado/master/Screenshots/ihart125.png)
+
 ----------------------------------------------------------------------------	
 Comments and suggestions for development are very welcome!
